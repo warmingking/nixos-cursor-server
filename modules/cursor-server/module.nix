@@ -4,11 +4,11 @@ moduleConfig: {
   pkgs,
   ...
 }: {
-  options.services.vscode-server = let
+  options.services.cursor-server = let
     inherit (lib) mkEnableOption mkOption;
     inherit (lib.types) lines listOf nullOr package str;
   in {
-    enable = mkEnableOption "VS Code Server";
+    enable = mkEnableOption "Cursor Server";
 
     enableFHS = mkEnableOption "a FHS compatible environment";
 
@@ -17,7 +17,7 @@ moduleConfig: {
       default = null;
       example = pkgs.nodejs_20;
       description = ''
-        Whether to use a specific Node.js rather than the version supplied by VS Code server.
+        Whether to use a specific Node.js rather than the version supplied by Cursor server.
       '';
     };
 
@@ -34,8 +34,8 @@ moduleConfig: {
 
     installPath = mkOption {
       type = str;
-      default = "$HOME/.vscode-server";
-      example = "$HOME/.vscode-server-oss";
+      default = "$HOME/.cursor-server";
+      example = "$HOME/.cursor-server-oss";
       description = ''
         The install path.
       '';
@@ -45,7 +45,7 @@ moduleConfig: {
       type = lines;
       default = "";
       description = ''
-        Lines of Bash that will be executed after the VS Code server installation has been patched.
+        Lines of Bash that will be executed after the Cursor server installation has been patched.
         This can be used as a hook for custom further patching.
       '';
     };
@@ -53,18 +53,18 @@ moduleConfig: {
 
   config = let
     inherit (lib) mkDefault mkIf mkMerge;
-    cfg = config.services.vscode-server;
-    auto-fix-vscode-server =
-      pkgs.callPackage ../../pkgs/auto-fix-vscode-server.nix
+    cfg = config.services.cursor-server;
+    auto-fix-cursor-server =
+      pkgs.callPackage ../../pkgs/auto-fix-cursor-server.nix
       (removeAttrs cfg [ "enable" ]);
   in
     mkIf cfg.enable (mkMerge [
       {
-        services.vscode-server.nodejsPackage = mkIf cfg.enableFHS (mkDefault pkgs.nodejs_20);
+        services.cursor-server.nodejsPackage = mkIf cfg.enableFHS (mkDefault pkgs.nodejs_20);
       }
       (moduleConfig {
-        name = "auto-fix-vscode-server";
-        description = "Automatically fix the VS Code server used by the remote SSH extension";
+        name = "auto-fix-cursor-server";
+        description = "Automatically fix the Cursor server used by the remote SSH extension";
         serviceConfig = {
           # When a monitored directory is deleted, it will stop being monitored.
           # Even if it is later recreated it will not restart monitoring it.
@@ -72,7 +72,7 @@ moduleConfig: {
           # so rather than creating our own restart mechanism, we leverage systemd to do this for us.
           Restart = "always";
           RestartSec = 0;
-          ExecStart = "${auto-fix-vscode-server}/bin/auto-fix-vscode-server";
+          ExecStart = "${auto-fix-cursor-server}/bin/auto-fix-cursor-server";
         };
       })
     ]);

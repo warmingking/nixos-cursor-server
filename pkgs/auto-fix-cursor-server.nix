@@ -21,12 +21,12 @@
   enableFHS ? false,
   nodejsPackage ? null,
   extraRuntimeDependencies ? [ ],
-  installPath ? "$HOME/.vscode-server",
+  installPath ? "$HOME/.cursor-server",
   postPatch ? "",
 }: let
   inherit (lib) makeBinPath makeLibraryPath optionalString;
 
-  # Based on: https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/applications/editors/vscode/generic.nix
+  # Based on: https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/applications/editors/cursor/generic.nix
   runtimeDependencies =
     [
       stdenv.cc.libc
@@ -68,7 +68,7 @@
   };
 
   patchELFScript = writeShellApplication {
-    name = "patchelf-vscode-server";
+    name = "patchelf-cursor-server";
     runtimeInputs = [ coreutils findutils patchelf ];
     text = ''
       bin_dir="$1"
@@ -115,12 +115,12 @@
       # Mark the bin directory as being fully patched.
       echo 1 > "$patched_file"
 
-      ${optionalString (postPatch != "") ''${writeShellScript "post-patchelf-vscode-server" postPatch} "$bin"''}
+      ${optionalString (postPatch != "") ''${writeShellScript "post-patchelf-cursor-server" postPatch} "$bin"''}
     '';
   };
 
   autoFixScript = writeShellApplication {
-    name = "auto-fix-vscode-server";
+    name = "auto-fix-cursor-server";
     runtimeInputs = [ coreutils findutils inotify-tools ];
     text = ''
       bins_dir_1=${installPath}/bin
@@ -134,7 +134,7 @@
           return 0
         fi
 
-        # Backwards compatibility with previous versions of nixos-vscode-server.
+        # Backwards compatibility with previous versions of nixos-cursor-server.
         local old_patched_file
         old_patched_file="$(basename "$actual_dir")"
         if [[ $old_patched_file == "server" ]]; then
@@ -144,12 +144,12 @@
           old_patched_file="${installPath}/.''${old_patched_file%%-*}.patched"
         fi
         if [[ -e $old_patched_file ]]; then
-          echo "Migrating old nixos-vscode-server patch marker file to new location in $actual_dir." >&2
+          echo "Migrating old nixos-cursor-server patch marker file to new location in $actual_dir." >&2
           cp "$old_patched_file" "$patched_file"
           return 0
         fi
 
-        echo "Patching Node.js of VS Code server installation in $actual_dir..." >&2
+        echo "Patching Node.js of Cursor server installation in $actual_dir..." >&2
 
         mv "$actual_dir/node" "$actual_dir/node.patched"
 
@@ -166,7 +166,7 @@
 
         # We leave the rest up to the Bash script
         # to keep having to deal with 'sh' compatibility to a minimum.
-        ${patchELFScript}/bin/patchelf-vscode-server \$(dirname "\$0")
+        ${patchELFScript}/bin/patchelf-cursor-server \$(dirname "\$0")
 
         # Let Node.js take over as if this script never existed.
         ${
@@ -192,24 +192,24 @@
       done < <(find "$bins_dir_1" "$bins_dir_2" -mindepth 1 -maxdepth 1 -type d -printf '%p\0')
  
       while IFS=: read -r bins_dir bin event; do
-        # A new version of the VS Code Server is being created.
+        # A new version of the Cursor Server is being created.
         if [[ $event == 'CREATE,ISDIR' ]]; then
           actual_dir="$bins_dir$bin"
           if [[ "$bins_dir" == "$bins_dir_2/" ]]; then
             actual_dir="$actual_dir/server"
-            # Hope that VSCode will not die if the directory exists when it tries to install, otherwise we'll need to
+            # Hope that Cursor will not die if the directory exists when it tries to install, otherwise we'll need to
             # use a coproc to wait for the directory to be created without entering in a race, then watch for the node
             # file to be created (probably while also avoiding a race)
             # https://unix.stackexchange.com/a/185370
             mkdir -p "$actual_dir"
           fi
-          echo "VS Code server is being installed in $actual_dir..." >&2
-          # Quickly create a node file, which will be removed when vscode installs its own version
+          echo "Cursor server is being installed in $actual_dir..." >&2
+          # Quickly create a node file, which will be removed when cursor installs its own version
           touch "$actual_dir/node"
           # Hope we don't race...
           inotifywait -qq -e DELETE_SELF "$actual_dir/node"
           patch_bin "$actual_dir"
-        # The monitored directory is deleted, e.g. when "Uninstall VS Code Server from Host" has been run.
+        # The monitored directory is deleted, e.g. when "Uninstall Cursor Server from Host" has been run.
         elif [[ $event == DELETE_SELF ]]; then
           # See the comments above Restart in the service config.
           exit 0
